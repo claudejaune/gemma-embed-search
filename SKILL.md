@@ -2,6 +2,7 @@
 name: gemma-embed-search
 description: Index a folder of images, audio, or text with a local multimodal embedding model and search it in natural language. Builds a resumable vector index through any OpenAI-compatible /v1/embeddings server that accepts multimodal content parts, such as llama.cpp's llama-server running EmbeddingGemma 2, then ranks files by semantic similarity with color filtering, multi-facet AND queries, JSON output, and HTML contact sheets. Use when the user wants to find photos or media by what is in them ("every photo of my dog", "shots with a red car at night", "portraits in yellow"), organize or triage a large media folder, dedupe near-identical images, or run semantic search over local files without sending them to a cloud API.
 compatibility: Requires Python 3.9+ with Pillow (or `uv run`), plus a running embeddings server that accepts multimodal content parts. No internet access needed once the model is local.
+license: MIT
 metadata:
   version: "1.0.0"
 ---
@@ -107,9 +108,12 @@ thumbnails with scores and filenames that the user can open in a browser.
 - The server must run the embedding model with mean pooling and its vision projector
   (`--mmproj`) loaded. Without the projector, image requests fail or return a vector that
   ignores the picture. `doctor` proves text works; run one image query to prove vision.
-- Images are re-encoded to JPEG at longest-side 768 before they are sent. This is required,
-  not cosmetic: servers commonly reject WebP or very large PNGs, and oversized images can
-  blow the vision token budget. Lower `--resize` to 512 to go faster on a big corpus.
+- Images are re-encoded to JPEG at longest-side 1536 before they are sent. The re-encode is
+  required, not cosmetic: servers commonly reject WebP, 16-bit, or mislabeled files, and
+  Pillow reads those instead. The model has no pixel limit — the server resamples every image
+  to a fixed vision-token budget — so `--resize` trades upload size for fidelity, not
+  correctness. Measured numbers and the details are in
+  [references/setup.md](references/setup.md#image-size-and-the-token-budget).
 - HEIC and raw camera formats are not read unless Pillow was built with the plugin. The
   script logs `skip <file>: cannot identify image file` and continues; check
   `skipped_errors` in the index summary rather than assuming full coverage.
@@ -127,7 +131,7 @@ doctor                       Check the server, list models, probe an embedding
 init [--root DIR]            Save url, model, key, and default root to the config file
 index   --root DIR           Embed new and changed files (incremental, resumable)
         [--modality auto|image|audio|text] [--include '*.png,sub/*.jpg']
-        [--exclude-dir node_modules,.git] [--limit N] [--batch 16] [--resize 768]
+        [--exclude-dir node_modules,.git] [--limit N] [--batch 16] [--resize 1536]
         [--force] [--compact]
 search  "query"              Rank indexed files; prints score, modality, path
         [--also P]... [--must P]... [--color NAME --min-color F | --max-color F]

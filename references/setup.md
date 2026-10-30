@@ -37,6 +37,34 @@ llama-server \
 A model that is loaded on demand can be evicted when another model is requested. The next
 embedding call reloads it and costs a few extra seconds; nothing is lost.
 
+## Image size and the token budget
+
+There is no maximum image dimension. The server pins the number of vision tokens per image
+(`--image-max-tokens` and `--image-min-tokens`) and resamples whatever you send to that patch
+grid. Measured on one photo with a 280-token budget:
+
+| Sent as | Request body | Vision tokens | Cosine vs full-resolution vector |
+| --- | --- | --- | --- |
+| 216x384 | 39 KB | 303 | 0.923 |
+| 431x768 | 119 KB | 303 | 0.936 |
+| 575x1024 | 190 KB | 303 | 0.955 |
+| 862x1536 | 366 KB | 268 | 0.996 |
+| 2300x4096 (original) | 1.8 MB | 268 | 1.000 |
+| 7200x12000 (upscaled) | 8.8 MB | 256 | 0.999 |
+
+What that means:
+
+- An oversized image does not fail and does not overflow the context. It is downsampled. The
+  only costs are upload bytes and decode time: 0.21 s at 768 px against 0.97 s at 12000 px.
+- Detail finer than the grid is unrecoverable at any resolution. About 280 tokens is a
+  20x14 patch grid, so a face occupying 30 pixels of a 4000-pixel photo is invisible to the
+  model no matter how sharp the file is. Do not chase small objects by sending bigger files.
+- Downscaling twice costs accuracy: 768 px lands at 0.936 cosine against the full-resolution
+  vector, while 1536 px lands at 0.996. That is why the default is 1536. Use `--resize 0` to
+  send files untouched, or `--resize 512` for a fast first pass over a huge folder.
+- The emitted token count drifts around the configured budget (256 to 303 for a 280 setting),
+  so leave headroom when sizing `--batch` against `--ctx-size`.
+
 ## Choosing a model
 
 Any multimodal embedding model that maps text and images into one vector space works.

@@ -37,9 +37,12 @@ size, so untouched files are never re-embedded. Force a rebuild with `--force`.
 format Pillow cannot decode (HEIC and camera RAW need extra plugins). The run continues;
 check `skipped_errors` in the summary to see how many were lost.
 
-**Request errors on large images, or the server logs a context overflow** — the batch does
-not fit the server context. Lower `--batch` to 4 or `--resize` to 512, or raise `--ctx-size`
-on the server.
+**Request errors or a context-overflow log line** — the batch does not fit the server
+context, not the image. One image costs a fixed ~280 vision tokens whatever its pixel size,
+so `--batch 16` needs roughly 4,500 tokens of context. Lower `--batch`, or raise
+`--ctx-size` on the server. A single enormous file only costs bandwidth and decode time:
+a 7200x12000 input took 0.97 s against 0.21 s for a 768 px version, and still returned a
+vector within 0.001 cosine of the full-resolution one.
 
 **`timed out after 300s`** — a big batch on a slow device, or the server is busy generating
 with another model. Raise `--timeout`, lower `--batch`, or give the embedding model its own
