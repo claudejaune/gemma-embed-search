@@ -364,16 +364,24 @@ def cmd_doctor(args, cfg, client):
         out["error"] = "unreachable or rejected auth"
         print(json.dumps(out, indent=2))
         raise SystemExit(3)
-    try:
-        vec = client.embed_one(QUERY_PREFIX.format(q="a red square"))
-        out["text_embedding"] = {"ok": True, "dim": len(vec)}
-    except SystemExit as exc:
-        out["text_embedding"] = {"ok": False, "error": "server rejected the request"}
-        log(f"  note: text embedding failed (exit {exc.code})")
+    # `doctor` is how you discover the model name, so it must work without one
+    probe = client.model if client.model in out["models"] else (out["models"] or [None])[0]
+    out["model"] = client.model or probe
+    if probe:
+        try:
+            vec = Client(client.url, probe, client.api_key, client.timeout) \
+                .embed_one(QUERY_PREFIX.format(q="a red square"))
+            out["text_embedding"] = {"ok": True, "dim": len(vec), "probed_with": probe}
+        except SystemExit:
+            out["text_embedding"] = {"ok": False, "error": "server rejected the probe"}
+    else:
+        out["text_embedding"] = {"ok": False, "error": "server listed no models to probe"}
     print(json.dumps(out, indent=2))
-    if client.model not in out["models"] and out["models"]:
+    if client.model and client.model not in out["models"]:
         log(f"\nNote: '{client.model}' is not in the server's model list. "
             f"Pick one of: {', '.join(out['models'])}")
+    elif not client.model:
+        log(f"\nNo --model set. Pick one from the list above and pass it to `init`.")
     return 0
 
 
@@ -681,7 +689,7 @@ def main(argv=None):
     if args.cmd != "doctor" and not model:
         die(2, "no model set. Run: embed_search.py init --url URL --model NAME "
                "(see `doctor` for the names the server offers).")
-    client = Client(url, model or "unused", key, args.timeout)
+    client = Client(url, model, key, args.timeout)
     return {"doctor": cmd_doctor, "init": cmd_init, "index": cmd_index,
             "search": cmd_search, "stats": cmd_stats}[args.cmd](args, cfg, client)
 
