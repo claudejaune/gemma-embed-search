@@ -16,6 +16,21 @@ user's hardware through a local server; nothing is uploaded anywhere.
 `scripts/embed_search.py` does four things: `doctor` checks the server, `init` saves the
 connection, `index` embeds files into a cache, and `search` ranks them against a query.
 
+## Local configuration
+
+<!-- BEGIN LOCAL CONFIG -->
+| Setting | Value |
+| --- | --- |
+| Server URL | `http://127.0.0.1:8080` |
+| Model | *not set — run `doctor` to list* |
+| API key | *none* |
+| Default folder | *not set — pass `--root`* |
+<!-- END LOCAL CONFIG -->
+
+An installing agent replaces this table with the user's values and writes the same values
+to `~/.config/gemma-embed-search/config.json`, so later commands need no connection flags.
+Ask the user for anything you do not know; never guess a model name, read it from `doctor`.
+
 ## Setup checklist
 
 Progress:
@@ -24,6 +39,8 @@ Progress:
 - [ ] Step 3: Index a 20-file pilot and eyeball one query
 - [ ] Step 4: Index the whole folder
 - [ ] Step 5: Answer the user's real query, with `--html` so they can see the hits
+
+If the Local configuration table already shows real values, skip Step 2.
 
 Run the script with `uv run scripts/embed_search.py` (installs Pillow from the script's
 inline metadata) or `python3 scripts/embed_search.py` if Pillow is already importable.

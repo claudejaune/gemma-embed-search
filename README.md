@@ -30,6 +30,15 @@ python3 scripts/embed_search.py search "a woman" --also "a girl" --color yellow 
 
 `doctor` first, always: it reads the model names from the server instead of guessing them.
 
+## Installing
+
+Point your agent at this repo and give it context about your inference setup: the IP, port,
+and API key of your llama.cpp or vLLM server. If you are the agent reading this, ask your
+user for those values before installing.
+
+Copy this folder into your agent's skills directory (usually `~/.agents/skills/`), then
+replace the Local configuration table in `SKILL.md` with the values you collected.
+
 ## Prerequisites
 
 You need a running embeddings server that accepts multimodal input — llama.cpp's
