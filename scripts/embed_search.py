@@ -578,12 +578,12 @@ def cmd_search(args, cfg, client):
             print(f"{row['score']:.4f}{extra}  [{row['modality']}]  {row['path']}")
 
     if args.html:
-        write_html(args.html, args.query, rows)
+        write_html(args.html, args.query, rows, args.thumb_width)
         log(f"wrote contact sheet: {args.html}")
     return 0
 
 
-def write_html(path, query, rows):
+def write_html(path, query, rows, thumb_w=512):
     from PIL import Image
     cells = []
     for row in rows:
@@ -592,9 +592,9 @@ def write_html(path, query, rows):
             try:
                 with Image.open(row["path"]) as im:
                     im = im.convert("RGB")
-                    im.thumbnail((256, 256))
+                    im.thumbnail((thumb_w, thumb_w))
                     buf = io.BytesIO()
-                    im.save(buf, "JPEG", quality=72)
+                    im.save(buf, "JPEG", quality=85)
                 thumb = (f"<img src='data:image/jpeg;base64,"
                          f"{base64.b64encode(buf.getvalue()).decode()}'>")
             except Exception:
@@ -607,7 +607,8 @@ def write_html(path, query, rows):
     with open(path, "w", encoding="utf-8") as fh:
         fh.write("<!doctype html><meta charset='utf-8'><title>" + query +
                  "</title><style>body{font:14px system-ui;margin:2em;background:#111;color:#ddd}"
-                 "main{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}"
+                 "main{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,320px));"
+                 "gap:14px;justify-content:start}"
                  "figure{margin:0;background:#1c1c1c;padding:8px;border-radius:8px}"
                  "img{width:100%;border-radius:4px;display:block}.miss{height:160px;display:grid;"
                  "place-items:center;color:#888}figcaption{margin-top:6px;word-break:break-all}"
@@ -663,6 +664,8 @@ def build_parser():
     sr.add_argument("--offset", type=int, default=0)
     sr.add_argument("--json", action="store_true", help="machine-readable output on stdout")
     sr.add_argument("--html", metavar="FILE", help="also write an HTML contact sheet")
+    sr.add_argument("--thumb-width", type=int, default=512, metavar="N",
+                    help="contact sheet thumbnail width in pixels (default 512)")
 
     add_scope(sub.add_parser("stats", help="summarize the index"))
     return p
