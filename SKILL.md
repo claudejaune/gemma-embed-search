@@ -109,9 +109,11 @@ Cosine scores from this model family sit between about 0.3 and 0.8. The absolute
 means little; the gap between hits and misses matters. If the top of the list is wrong, the
 query is wrong — rephrase it rather than trusting the ranking.
 
-For visual review, always offer `--html FILE`: it writes a self-contained contact sheet of
-thumbnails with scores and filenames that the user can open in a browser. Thumbnails are
-512 px wide by default; raise `--thumb-width` for close inspection of detail.
+For visual review, always offer `--html`: it writes a contact sheet of thumbnails with
+scores and filenames that the user can open in a browser. A bare `--html` writes `hits.html`
+in the working directory; `--html FILE` sets the path. Thumbnails are embedded as base64, so
+the sheet is self-contained and travels on its own. They are 512 px wide by default; raise
+`--thumb-width` for close inspection of detail.
 
 ## Gotchas
 
@@ -154,7 +156,7 @@ index   --root DIR           Embed new and changed files (incremental, resumable
 search  "query"              Rank indexed files; prints score, modality, path
         [--also P]... [--must P]... [--color NAME --min-color F | --max-color F]
         [--modality image] [--dims 512|256|128] [--top 20] [--offset 0]
-        [--json] [--html FILE] [--thumb-width 512]
+        [--json] [--html [FILE]] [--thumb-width 512]
 stats                        Entry count, modality mix, model, index size
 ```
 

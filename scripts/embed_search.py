@@ -15,7 +15,7 @@ Usage:
   embed_search.py init      --url URL --model NAME [--api-key KEY] [--root DIR]
   embed_search.py index     --root DIR [--modality auto] [--limit N] [--force] [--compact]
   embed_search.py search    "query text" [--also P] [--must P] [--color yellow]
-                            [--min-color 0.03] [--top 20] [--json] [--html out.html]
+                            [--min-color 0.03] [--top 20] [--json] [--html [FILE]]
   embed_search.py stats     [--root DIR]
 
 Options (all subcommands):
@@ -663,7 +663,8 @@ def build_parser():
     sr.add_argument("--top", type=int, default=20)
     sr.add_argument("--offset", type=int, default=0)
     sr.add_argument("--json", action="store_true", help="machine-readable output on stdout")
-    sr.add_argument("--html", metavar="FILE", help="also write an HTML contact sheet")
+    sr.add_argument("--html", nargs="?", const="hits.html", metavar="FILE",
+                    help="write an HTML contact sheet (bare --html writes hits.html)")
     sr.add_argument("--thumb-width", type=int, default=512, metavar="N",
                     help="contact sheet thumbnail width in pixels (default 512)")
 
