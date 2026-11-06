@@ -156,6 +156,21 @@ class Client:
         )
         return self._send(req, json_body=False)
 
+    def try_get(self, path):
+        """GET that reports failure as None instead of exiting, so `doctor` can probe
+        several paths. Servers differ: llama.cpp answers both /v1/models and /models,
+        others answer one and return an error body for the other."""
+        try:
+            req = urllib.request.Request(
+                f"{self.url}{path}",
+                headers={"Content-Type": "application/json",
+                         **({"Authorization": f"Bearer {self.api_key}"} if self.api_key else {})},
+            )
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                return json.loads(resp.read())
+        except Exception:
+            return None
+
     def _send(self, req, json_body=True):
         try:
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
@@ -358,18 +373,19 @@ def truncate(vec, dims):
 
 def cmd_doctor(args, cfg, client):
     out = {"url": client.url, "model": client.model, "auth": bool(client.api_key)}
-    try:
-        raw = client.get("/models")
-        data = json.loads(raw).get("data", [])
-        out["reachable"] = True
-        out["models"] = [m.get("id") for m in data if isinstance(m, dict)]
-    except SystemExit as exc:
-        if exc.code != 3:
-            raise
+    models = None
+    for path in ("/v1/models", "/models"):
+        body = client.try_get(path)
+        if isinstance(body, dict) and isinstance(body.get("data"), list):
+            models = [m.get("id") for m in body["data"] if isinstance(m, dict)]
+            break
+    if models is None:
         out["reachable"] = False
-        out["error"] = "unreachable or rejected auth"
+        out["error"] = "unreachable, rejected auth, or no model list at /v1/models or /models"
         print(json.dumps(out, indent=2))
         raise SystemExit(3)
+    out["reachable"] = True
+    out["models"] = models
     # `doctor` is how you discover the model name, so it must work without one
     probe = client.model if client.model in out["models"] else (out["models"] or [None])[0]
     out["model"] = client.model or probe

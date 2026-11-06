@@ -16,10 +16,8 @@ the same shape; test with `doctor` and one image before indexing a corpus.
 
 **LM Studio fails requirements 2 and 3.** Its `/v1/embeddings` takes only a string or an array
 of strings and rejects content parts with `'input' field must be a string or an array of
-strings`, so text embeds and images and audio do not. It also serves `/v1/models` but not
-`/models`, and answers `GET /models` with HTTP 200 and an error body — which makes `doctor`
-report `"reachable": true, "models": []` instead of an error. Text-only search works there;
-the image and audio features do not, and no client-side change fixes it.
+strings`, so text embeds and images and audio do not. Text-only search works there; the image
+and audio features do not, and no client-side change fixes it.
 
 ## Starting llama-server
 
