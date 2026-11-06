@@ -327,6 +327,9 @@ def read_index(path):
 
 
 def load_existing(path):
+    """A missing index is the normal state before a first run, so it is not an error."""
+    if not os.path.exists(path):
+        return {}
     try:
         _, recs = read_index(path)
         return {r["p"]: r for r in recs}
