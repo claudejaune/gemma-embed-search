@@ -1,12 +1,12 @@
 # Gemma Embed Search
 
-An agent skill that indexes a folder of images, audio, or text with a locally running [EmbeddingGemma 2](https://blog.google/innovation-and-ai/technology/developers-tools/embeddinggemma-2/) model that lets you search media such as images, and videos by meaning/content rather than by filename. For example, "find all images with a dominant yellow theme and a dog in it"
+An agent skill that indexes a folder of images, audio, or text with a locally running [EmbeddingGemma 2](https://blog.google/innovation-and-ai/technology/developers-tools/embeddinggemma-2/) model, so you can search your media by meaning rather than by filename. For example: "find all images with a dominant yellow theme and a dog in them".
 
 Fully local and private 1 GB model, runs on a potato.
 
 ## What it does
 
-- **Indexes** any folder or file(s): images, audio clips, and text documents.
+- **Indexes** any folder, recursively: images, audio clips, and text documents.
 - **Searches** with natural language.
 - **Combines facets**: `--also` averages synonyms into one query, `--must` requires several
   conditions at once.
@@ -19,7 +19,7 @@ Fully local and private 1 GB model, runs on a potato.
 
 ## Quick start
 
-> (Mostly) written by AI, fact checked by a human
+> (Mostly) written by AI, fact-checked by a human
 
 ### Prerequisites
 
@@ -38,7 +38,7 @@ Verify:
 python3 -c "import PIL; print(PIL.__version__)"
 ```
 
-> Prefer [uv](https://docs.astral.sh/uv/)? Run `uv run scripts/embed_search.py` and it installs the pinned Pillow into a throwaway environment for you, with nothing system-wide.
+> Prefer [uv](https://docs.astral.sh/uv/)? Run `uv run scripts/embed_search.py` and it installs the Pillow it needs into a throwaway environment for you, with nothing system-wide.
 
 ### Set up llama.cpp
 
@@ -57,7 +57,6 @@ If you are the agent reading this, ask your user for those values before install
 
 Then, copy this folder into your agent's skills directory (usually `~/.agents/skills/`), and
 replace the Local configuration table in `SKILL.md` with the values you collected.
-
 
 ```bash
 python3 scripts/embed_search.py --url http://127.0.0.1:8080 doctor   # list models, probe one
