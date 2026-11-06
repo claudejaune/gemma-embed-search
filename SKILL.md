@@ -18,18 +18,24 @@ connection, `index` embeds files into a cache, and `search` ranks them against a
 
 ## Local configuration
 
-<!-- BEGIN LOCAL CONFIG -->
-| Setting | Value |
-| --- | --- |
-| Server URL | `http://127.0.0.1:1235` |
-| Model | *not set — run `doctor` to list* |
-| API key | *none* |
-| Default folder | *not set — pass `--root`* |
-<!-- END LOCAL CONFIG -->
+Settings live in `config.json`, never in this file:
 
-An installing agent replaces this table with the user's values and writes the same values
-to `~/.config/gemma-embed-search/config.json`, so later commands need no connection flags.
-Ask the user for anything you do not know; never guess a model name, read it from `doctor`.
+- Linux and macOS: `~/.config/gemma-embed-search/config.json`
+- Windows: `%USERPROFILE%\.config\gemma-embed-search\config.json`
+
+Read that file first. If it has `url` and `model`, every later command works without
+connection flags and you can skip Step 2.
+
+If it is missing or incomplete, ask the user for the server URL and the folder to index, run
+`doctor` to list the models the server actually offers, then run `init` to write the file.
+`init` merges, so topping up one setting at a time is safe. Never guess a model name.
+
+Copying `config.example.json` from this folder to that path and editing it does the same job
+as `init`, for a user who would rather edit the file directly. Add `"api_key"` there only if
+the server needs one.
+
+Never save settings inside the skill folder itself. Updating the skill replaces every file in
+it, and anything written there is lost.
 
 ## Setup checklist
 
@@ -40,7 +46,7 @@ Progress:
 - [ ] Step 4: Index the whole folder
 - [ ] Step 5: Answer the user's real query, with `--html` so they can see the hits
 
-If the Local configuration table already shows real values, skip Step 2.
+Skip Step 2 if `config.json` already has `url` and `model`.
 
 Run the script with `uv run scripts/embed_search.py` (installs Pillow from the script's
 inline metadata) or `python3 scripts/embed_search.py` if Pillow is already importable.

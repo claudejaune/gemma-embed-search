@@ -1,0 +1,5 @@
+{
+  "url": "http://127.0.0.1:1235",
+  "model": "paste the exact name reported by doctor",
+  "root": "/absolute/path/to/the/folder/to/index"
+}

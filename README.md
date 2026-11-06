@@ -57,8 +57,11 @@ and API key of your llama.cpp or vLLM server.
 
 If you are the agent reading this, ask your user for those values before installing.
 
-Then, copy this folder into your agent's skills directory (usually `~/.agents/skills/`), and
-replace the Local configuration table in `SKILL.md` with the values you collected.
+Then, copy this folder into your agent's skills directory (usually `~/.agents/skills/`).
+
+Nothing user-specific goes in the skill folder, so re-copying it to update is always safe.
+Settings live in `~/.config/gemma-embed-search/config.json`, which the `init` command below
+writes for you; `config.example.json` shows the shape if you would rather write it by hand.
 
 ```bash
 python3 scripts/embed_search.py --url http://127.0.0.1:1235 doctor   # list models, probe one
@@ -71,6 +74,7 @@ python3 scripts/embed_search.py search "a woman" --also "a girl" --color yellow 
 
 ```
 SKILL.md              agent-facing instructions, loaded when the skill activates
+config.example.json   template for the user's config file, which lives outside this repo
 scripts/              embed_search.py — index, search, stats, doctor, init
 references/           setup.md, query-guide.md, errors.md — read on demand
 ```
