@@ -201,9 +201,12 @@ class Client:
 # ------------------------------------------------------------- media processing
 
 def image_item(path, resize):
-    """Re-encode to JPEG so the server never sees an unsupported container (WebP, 16-bit TIFF)."""
-    from PIL import Image
+    """Re-encode to JPEG so the server never sees an unsupported container (WebP, 16-bit TIFF).
+    EXIF orientation is applied here because the re-encode drops the tag, and a sideways photo
+    embeds as a sideways photo."""
+    from PIL import Image, ImageOps
     with Image.open(path) as im:
+        im = ImageOps.exif_transpose(im)
         im = im.convert("RGB")
         if resize and max(im.size) > resize:
             im.thumbnail((resize, resize))
@@ -584,13 +587,14 @@ def cmd_search(args, cfg, client):
 
 
 def write_html(path, query, rows, thumb_w=512):
-    from PIL import Image
+    from PIL import Image, ImageOps
     cells = []
     for row in rows:
         thumb = ""
         if row.get("modality") == "image" and os.path.exists(row["path"]):
             try:
                 with Image.open(row["path"]) as im:
+                    im = ImageOps.exif_transpose(im)
                     im = im.convert("RGB")
                     im.thumbnail((thumb_w, thumb_w))
                     buf = io.BytesIO()
