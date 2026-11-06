@@ -63,11 +63,12 @@ started a server yet, read [references/setup.md](references/setup.md) and give t
 command for their model.
 
 **Step 2 — save it** so later calls need no flags. Pass `--api-key` only if the server
-requires one; it is written to the config file with mode 0600.
+requires one; it is written to the config file with mode 0600. Pass `--root` on any later
+command to work on a different folder without changing what is saved.
 
 ```bash
-uv run scripts/embed_search.py --url http://127.0.0.1:1235 --model <name-from-doctor> init
-uv run scripts/embed_search.py --root ~/Pictures index --limit 20
+uv run scripts/embed_search.py --url http://127.0.0.1:1235 --model <name-from-doctor> init --root <folder>
+uv run scripts/embed_search.py index --limit 20
 ```
 
 **Step 3 — pilot before the long run.** Indexing is the expensive step: roughly 0.25 s per
@@ -78,7 +79,7 @@ and confirm the results look right before committing to the full pass.
 interrupted run resumes on its own.
 
 ```bash
-uv run scripts/embed_search.py --root ~/Pictures index
+uv run scripts/embed_search.py index
 ```
 
 **Step 5 — search.**

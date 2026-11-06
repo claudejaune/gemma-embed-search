@@ -65,10 +65,14 @@ writes for you; `config.example.json` shows the shape if you would rather write 
 
 ```bash
 python3 scripts/embed_search.py --url http://127.0.0.1:1235 doctor   # list models, probe one
-python3 scripts/embed_search.py --url http://127.0.0.1:1235 --model <name> init --root ~/Pictures
-python3 scripts/embed_search.py index --root ~/Pictures
+python3 scripts/embed_search.py --url http://127.0.0.1:1235 --model <name> init --root <folder>
+python3 scripts/embed_search.py index
 python3 scripts/embed_search.py search "a woman" --also "a girl" --color yellow --min-color 0.05 --html hits.html
 ```
+
+`<name>` is one of the models `doctor` lists and `<folder>` is the directory you want to
+index. `init` remembers both, so the commands after it need no connection flags. Pass
+`--root` to any of them to work on a different folder without changing what is saved.
 
 ## Repo layout
 
