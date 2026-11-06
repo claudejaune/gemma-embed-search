@@ -19,7 +19,7 @@ Usage:
   embed_search.py stats     [--root DIR]
 
 Options (all subcommands):
-  --url URL        Embeddings server base URL (default http://127.0.0.1:8080)
+  --url URL        Embeddings server base URL (default http://127.0.0.1:1235)
   --model NAME     Model name the server routes to (see `doctor` for the list)
   --api-key KEY    Bearer token; prefer the EMBED_SEARCH_API_KEY environment variable
   --root DIR       Folder to index or search (also settable with `init --root`)
@@ -53,7 +53,7 @@ import urllib.error
 import urllib.request
 
 VERSION = "1.0.0"
-DEFAULT_URL = "http://127.0.0.1:8080"
+DEFAULT_URL = "http://127.0.0.1:1235"
 CONFIG_PATH = os.path.expanduser("~/.config/gemma-embed-search/config.json")
 CACHE_DIR = os.path.expanduser("~/.cache/gemma-embed-search")
 

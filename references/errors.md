@@ -37,6 +37,13 @@ size, so untouched files are never re-embedded. Force a rebuild with `--force`.
 format Pillow cannot decode (HEIC and camera RAW need extra plugins). The run continues;
 check `skipped_errors` in the summary to see how many were lost.
 
+**`input (N tokens) is too large to process. increase the physical batch size`** — one item is
+longer than the server's *physical* batch. That is `-ub` / `--ubatch-size` (default 512), not
+`-b` / `--batch-size` (default 2048), which is the logical batch and does not fix this. Long
+text files trip it first: a 4,000-character file is roughly 1,500 tokens and fails on its own,
+so lowering `--batch` does not help either. Raise `-ub` on the server, or lower `--max-chars`
+so text items fit.
+
 **Request errors or a context-overflow log line** — the batch does not fit the server
 context, not the image. One image costs a fixed ~280 vision tokens whatever its pixel size,
 so `--batch 16` needs roughly 4,500 tokens of context. Lower `--batch`, or raise

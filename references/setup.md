@@ -12,6 +12,15 @@ The script talks to an HTTP embeddings endpoint. It needs three things from any 
 llama.cpp's `llama-server` satisfies all three. Other OpenAI-compatible servers may accept
 the same shape; test with `doctor` and one image before indexing a corpus.
 
+## Servers that do not qualify
+
+**LM Studio fails requirements 2 and 3.** Its `/v1/embeddings` takes only a string or an array
+of strings and rejects content parts with `'input' field must be a string or an array of
+strings`, so text embeds and images and audio do not. It also serves `/v1/models` but not
+`/models`, and answers `GET /models` with HTTP 200 and an error body — which makes `doctor`
+report `"reachable": true, "models": []` instead of an error. Text-only search works there;
+the image and audio features do not, and no client-side change fixes it.
+
 ## Starting llama-server
 
 Point one server at the embedding model, with its vision projector and mean pooling:
@@ -21,8 +30,8 @@ llama-server \
   --model  /path/to/embedding-model.gguf \
   --mmproj /path/to/mmproj-embedding-model.gguf \
   --embedding --pooling mean \
-  --ctx-size 8192 --batch-size 2048 \
-  --host 127.0.0.1 --port 8080
+  --ctx-size 8192 --batch-size 2048 --ubatch-size 2048 \
+  --host 127.0.0.1 --port 1235
 ```
 
 | Flag | Why it matters here |
@@ -83,7 +92,7 @@ on. Requirements:
 ## Verifying
 
 ```bash
-uv run scripts/embed_search.py --url http://127.0.0.1:8080 --model <name> doctor
+uv run scripts/embed_search.py --url http://127.0.0.1:1235 --model <name> doctor
 ```
 
 A healthy run reports `"reachable": true`, lists the model in `models`, and returns

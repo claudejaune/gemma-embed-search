@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+
+# contact sheets written by `search --html`
+*.html

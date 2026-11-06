@@ -89,7 +89,7 @@ search "a woman" --also "a girl" --color yellow --min-color 0.05 --top 40 --html
 search "landscape scenery" --color blue --min-color 0.20
 
 # Screenshots of an error, not photos
-search "an error message on a screen" --modality image --top 10
+search "an error message on a screen" --modality image --top 20
 
 # Sound of rain among recorded clips
 search "rain falling" --modality audio

@@ -42,11 +42,13 @@ python3 -c "import PIL; print(PIL.__version__)"
 
 ### Set up llama.cpp
 
-If you don't have an inference engine such as llama.cpp, LM Studio, or vLLM installed, get [llama.cpp](https://llama.app/) for your OS and run the following:
+If you don't have an inference engine such as llama.cpp or vLLM installed, get [llama.cpp](https://llama.app/) for your OS and run the following:
 
 ```bash
-llama serve -hf ggml-org/embeddinggemma-2-GGUF:Q8_0
+llama serve -hf ggml-org/embeddinggemma-2-GGUF:Q8_0 --embedding --pooling mean -c 8192 -b 2048 -ub 2048 -ngl 99 --host 0.0.0.0 --port 1235
 ```
+
+Change the `--host` and `--port` values to your preference.
 
 ### Installing
 
@@ -59,8 +61,8 @@ Then, copy this folder into your agent's skills directory (usually `~/.agents/sk
 replace the Local configuration table in `SKILL.md` with the values you collected.
 
 ```bash
-python3 scripts/embed_search.py --url http://127.0.0.1:8080 doctor   # list models, probe one
-python3 scripts/embed_search.py --url http://127.0.0.1:8080 --model <name> init --root ~/Pictures
+python3 scripts/embed_search.py --url http://127.0.0.1:1235 doctor   # list models, probe one
+python3 scripts/embed_search.py --url http://127.0.0.1:1235 --model <name> init --root ~/Pictures
 python3 scripts/embed_search.py index --root ~/Pictures
 python3 scripts/embed_search.py search "a woman" --also "a girl" --color yellow --min-color 0.05 --html hits.html
 ```

@@ -21,7 +21,7 @@ connection, `index` embeds files into a cache, and `search` ranks them against a
 <!-- BEGIN LOCAL CONFIG -->
 | Setting | Value |
 | --- | --- |
-| Server URL | `http://127.0.0.1:8080` |
+| Server URL | `http://127.0.0.1:1235` |
 | Model | *not set — run `doctor` to list* |
 | API key | *none* |
 | Default folder | *not set — pass `--root`* |
@@ -49,7 +49,7 @@ inline metadata) or `python3 scripts/embed_search.py` if Pillow is already impor
 server.
 
 ```bash
-uv run scripts/embed_search.py --url http://127.0.0.1:8080 doctor
+uv run scripts/embed_search.py --url http://127.0.0.1:1235 doctor
 ```
 
 `doctor` prints the models the server offers and probes one embedding. If the user has not
@@ -60,7 +60,7 @@ command for their model.
 requires one; it is written to the config file with mode 0600.
 
 ```bash
-uv run scripts/embed_search.py --url http://127.0.0.1:8080 --model <name-from-doctor> init
+uv run scripts/embed_search.py --url http://127.0.0.1:1235 --model <name-from-doctor> init
 uv run scripts/embed_search.py --root ~/Pictures index --limit 20
 ```
 
@@ -88,6 +88,7 @@ uv run scripts/embed_search.py search "a black labrador on a beach" --top 20 --h
 | Plain semantic search | `search "a crowded night market"` |
 | Two facets that must both hold | `search "a woman" --must "the color yellow"` |
 | Synonyms so one phrasing does not dominate | `search "a woman" --also "a girl" --also "female portrait"` |
+| Find every image containing X | `search "characters with red hair" --top 60 --html hits.html` |
 | Subject plus a real color constraint | `search "a woman" --color yellow --min-color 0.05` |
 | Mostly monochrome or dark frames | `search "any image" --max-color blue --modality image` |
 | Only one kind of file | `search "siren sounds" --modality audio` |
@@ -107,12 +108,23 @@ so stdout always pipes cleanly into `jq`.
 
 Cosine scores from this model family sit between about 0.3 and 0.8. The absolute number
 means little; the gap between hits and misses matters. If the top of the list is wrong, the
-query is wrong — rephrase it rather than trusting the ranking.
+query is wrong — rephrase it rather than trusting the ranking. Never present a long list as
+equally good: name where the confident results stop and the guessing starts.
+
+**A short list is not the whole answer.** Every indexed file gets a score, so the `total` in the
+output counts the whole corpus and never tells you how many results are plausible. Find the
+cliff instead — the point where scores stop falling steeply. If the list you showed ends before
+it, say the results are truncated and offer a longer run: a bigger `--top` costs one more
+contact sheet, not another index. Honor a count the user names, and still state the cutoff you
+applied. Never claim "there are none" without a widened list, `--top 100` or more, that someone
+actually looked at.
 
 For visual review, always offer `--html`: it writes a contact sheet of thumbnails with
 scores and filenames that the user can open in a browser. A bare `--html` writes `hits.html`
 in the working directory; `--html FILE` sets the path. Thumbnails are embedded as base64, so
-the sheet is self-contained and travels on its own. They are 512 px wide by default; raise
+the sheet is self-contained and travels on its own. The sheet embeds real thumbnails of the
+matched files, so treat it as a copy of that part of the library: keep it out of version control
+and out of anything you forward. They are 512 px wide by default; raise
 `--thumb-width` for close inspection of detail.
 
 ## Gotchas
@@ -120,6 +132,16 @@ the sheet is self-contained and travels on its own. They are 512 px wide by defa
 - A color word inside the query text is a soft hint, not a filter. `"a woman with a yellow
   theme"` ranks a woman in an orange jacket first. Use `--color yellow --min-color 0.05`
   for an actual constraint; it is computed from pixels, not from the model.
+- A style word is a soft hint too, and a weaker one. `"a photorealistic woman with red hair"`
+  ranks an ink illustration of a red-haired woman first, because the subject nouns outweigh the
+  style. Move the style into `--must` so it is scored as its own facet and pin the visual
+  attribute with `--color`. Neither is a true filter: `--must` takes the minimum across facets,
+  so pushing hard on one trades the other away.
+- Several subjects in one frame blend into a single vector, so the frame scores worse on a
+  single-subject query than a frame devoted to that subject: a portrait of a red-haired woman
+  beside a man can sit far down a `"woman with red hair"` search while ranking near the top of
+  `"characters with red hair"`. Synonyms of the same singular idea do not help; the plural or
+  collective form does. Widen `--top` when the question is "find everything containing X".
 - `--color` needs the index to hold color stats, which only `index` computes. An index
   built with an older version reports 0.0 for everything: re-index with `--force` if color
   filtering silently excludes every file.
