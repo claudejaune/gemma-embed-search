@@ -37,9 +37,20 @@ llama-server \
 | `--embedding` | Enables `/v1/embeddings`. Without it every request 404s. |
 | `--pooling mean` | Multimodal embedding models are trained for mean pooling. Other pooling makes image-to-text similarity collapse. |
 | `--mmproj` | Loads the vision (and, for audio-capable models, audio) encoder. Text works without it, images silently do not. |
-| `--ctx-size` | Must hold a whole batch. At about 280 vision tokens per image, 8192 tokens fits roughly 25 images per request. |
+| `--ctx-size` | Must hold a whole batch. EmbeddingGemma 2 spends about 1024 vision tokens per image at `-ub 2048` (the server caps its native 1120-token budget to fit one ubatch), so 8192 tokens fits roughly 7 images per request. Keep `--batch` at or below that, or raise `--ubatch-size` to raise both budgets. |
 | `--api-key` | Optional. If set, pass the same key to the script with `--api-key` or `EMBED_SEARCH_API_KEY`. |
-| `--models-preset` / multi-model routers | The `--model` name the script sends must match the name the server advertises in `GET /models`, which is not always the file name. |
+| `--models-preset` / multi-model routers | The `--model` name the script sends must match the name the server advertises in `GET /models`, which is not always the file name. With `-hf`, the advertised name is the `-hf` spec itself, e.g. `ggml-org/embeddinggemma-2-GGUF:Q8_0`. |
+
+With `-hf repo:QUANT` you can skip `--mmproj` entirely: llama.cpp downloads the projector
+whose quant matches the model's tag from the same repo (this is `--mmproj-auto`, on by
+default). Passing an explicit `--mmproj` path suppresses the auto-download.
+
+**iGPUs and CPU-only machines:** on Intel integrated graphics, the default device selection
+offloads to Vulkan, and the i915 driver resets the GPU under sustained image load (a compute
+dispatch outlives the kernel's preemption timeout → `VK_ERROR_DEVICE_LOST` → the server
+aborts). It is intermittent: a small pilot can pass while a long index dies. Use
+`--device none -ngl 0` on iGPU or CPU-only hosts; partial offload (`-ngl` below the layer
+count) is sometimes faster but still crash-prone, so CPU is the reliable baseline.
 
 A model that is loaded on demand can be evicted when another model is requested. The next
 embedding call reloads it and costs a few extra seconds; nothing is lost.
@@ -71,6 +82,10 @@ What that means:
   send files untouched, or `--resize 512` for a fast first pass over a huge folder.
 - The emitted token count drifts around the configured budget (256 to 303 for a 280 setting),
   so leave headroom when sizing `--batch` against `--ctx-size`.
+- The budget is clamped by the ubatch size: the server logs `cap image_max_tokens
+  (original=1120) to 1024 (n_ubatch = 2048)` when `-ub` is smaller than the model's native
+  budget. At the capped 1024, an 8192-token context holds only about 7 images per request —
+  a larger `--batch` overflows the context and the request hangs until it times out.
 
 ## Choosing a model
 
@@ -79,8 +94,9 @@ EmbeddingGemma 2 (740M parameters, 768-dim output, text plus image plus audio, A
 is the reference target for this skill and is what the numbers in these docs were measured
 on. Requirements:
 
-- A GGUF build current enough to know the architecture. If the server exits with an
-  "unknown model architecture" or "unsupported" error, update the server rather than the
+- A GGUF build current enough to know the architecture: the `gemma-embedding2` architecture
+  landed in llama.cpp on 2026-10-06, so v0.9.0 or any later nightly works, and older builds
+  stop with "unknown model architecture" or "unsupported". Update the server rather than the
   script.
 - Use Q8_0 or Q6_K quantization. Do not run these models in F16: activations overflow and
   the vectors come out NaN or meaningless.

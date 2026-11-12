@@ -71,12 +71,16 @@ uv run scripts/embed_search.py --url http://127.0.0.1:1235 --model <name-from-do
 uv run scripts/embed_search.py index --limit 20
 ```
 
-**Step 3 — pilot before the long run.** Indexing is the expensive step: roughly 0.25 s per
-image on a desktop GPU, so 10,000 files is about 40 minutes. Index 20 files, run one query,
+**Step 3 — pilot before the long run.** Indexing is the expensive step. Expect 0.25–1 s/image
+on a recent desktop GPU, so 10,000 files is about 1–3 hours. CPU-only systems: anywhere from
+5–35 s/image, depending on your processor and the size/resolution of the images, so the same
+pass is an overnight-or-longer job. Index 20 files, run one query,
 and confirm the results look right before committing to the full pass.
 
 **Step 4 — full index.** Re-running `index` only embeds new or changed files, so an
-interrupted run resumes on its own.
+interrupted run resumes on its own. The index is a durable artifact: stopping the server never
+invalidates it. The server is only needed to embed new files and to embed each query, so
+starting it on demand — search, then shut it down — is a first-class workflow.
 
 ```bash
 uv run scripts/embed_search.py index

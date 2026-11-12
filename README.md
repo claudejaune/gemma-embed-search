@@ -17,6 +17,8 @@ Fully local and private 1 GB model, runs on a potato.
 - **Outputs for humans and machines**: `--json` for pipes, `--html` for a thumbnail contact
   sheet you can open in a browser.
 
+This skill has been tested successfully on an AMD Strix Halo, a 4 GB VRAM Nvidia GPU, and a quad-core i7 laptop from 2018 with no GPU.
+
 ## Quick start
 
 > (Mostly) written by AI, fact-checked by a human
@@ -39,16 +41,6 @@ python3 -c "import PIL; print(PIL.__version__)"
 ```
 
 > Prefer [uv](https://docs.astral.sh/uv/)? Run `uv run scripts/embed_search.py` and it installs the Pillow it needs into a throwaway environment for you, with nothing system-wide.
-
-### Set up llama.cpp
-
-If you don't have an inference engine such as llama.cpp or vLLM installed, get [llama.cpp](https://llama.app/) for your OS and run the following:
-
-```bash
-llama serve -hf ggml-org/embeddinggemma-2-GGUF:Q8_0 --embedding --pooling mean -c 8192 -b 2048 -ub 2048 -ngl 99 --host 0.0.0.0 --port 1235
-```
-
-Change the `--host` and `--port` values to your preference.
 
 ### Installing
 
@@ -73,6 +65,26 @@ python3 scripts/embed_search.py search "a woman" --also "a girl" --color yellow 
 `<name>` is one of the models `doctor` lists and `<folder>` is the directory you want to
 index. `init` remembers both, so the commands after it need no connection flags. Pass
 `--root` to any of them to work on a different folder without changing what is saved.
+
+### Set up llama.cpp
+
+If you don't have an inference engine such as llama.cpp or vLLM installed, get [llama.cpp](https://llama.app/) for your OS and run the following:
+
+- For GPUs with more than 2 GB VRAM:
+
+```bash
+llama serve -hf ggml-org/embeddinggemma-2-GGUF:Q8_0 --embedding --pooling mean -c 8192 -b 2048 -ub 2048 -ngl 99 --host 127.0.0.1 --port 1235
+```
+
+- For iGPUs, or to offload all processing to CPU:
+
+```bash
+llama serve -hf ggml-org/embeddinggemma-2-GGUF:Q8_0 --embedding --pooling mean -c 8192 -b 2048 -ub 2048 --device none -ngl 0 --host 127.0.0.1 --port 1235
+```
+
+Optionally, protect the server with its own `--api-key <key>` flag. If you do, pass the same
+key to the script with its `--api-key` flag (or the `EMBED_SEARCH_API_KEY` environment
+variable). Change the `--host` and `--port` values to your preference.
 
 ## Repo layout
 
