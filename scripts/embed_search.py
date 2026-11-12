@@ -249,8 +249,10 @@ def text_item(path, max_chars):
     return DOC_PREFIX.format(t=body)
 
 
-def color_stats(path, bins=12):
-    """Hue histogram plus lightness buckets, from a 64x64 thumbnail (~5 ms)."""
+def color_stats(path, bins=24):
+    """Hue histogram plus lightness buckets, from a 64x64 thumbnail (~5 ms).
+    Pixels with saturation below 0.35 count as gray, not as a color: skin, brown
+    hair, warm wood and dark UI tints must not register as a dominant hue."""
     from PIL import Image
     with Image.open(path) as im:
         im = im.convert("RGB")
@@ -265,7 +267,7 @@ def color_stats(path, bins=12):
             dark += 1
         elif v > 0.85 and s < 0.20:
             bright += 1
-        elif s < 0.20:
+        elif s < 0.35:
             gray += 1
         else:
             hist[min(int(h * bins), bins - 1)] += 1
@@ -449,6 +451,23 @@ def iter_files(root, include, exclude_dirs):
 
 def cmd_index(args, cfg, client):
     root, idx = resolve_paths(args, cfg, need_root=True)
+    if args.refresh_colors:
+        meta, recs = read_index(idx)
+        done = 0
+        for r in recs:
+            if r.get("m") != "image" or not os.path.exists(r["p"]):
+                continue
+            try:
+                r.update(color_stats(r["p"]))
+                done += 1
+            except Exception as exc:
+                log(f"  skip {r['p']}: {exc}")
+        with open(idx, "w", encoding="utf-8") as fh:
+            fh.write(json.dumps(meta) + "\n")
+            for r in recs:
+                fh.write(json.dumps(r) + "\n")
+        print(json.dumps({"refreshed": done, "total": len(recs), "index": idx}))
+        return 0
     if not root:
         die(2, "index needs --root DIR (the folder to embed).")
     if not os.path.isdir(root):
@@ -561,6 +580,10 @@ def cmd_search(args, cfg, client):
     _, records = read_index(idx)
     if not records:
         die(4, f"index {idx} is empty. Run: embed_search.py index --root DIR")
+    if (args.color or args.max_color is not None) and any(
+            r.get("m") == "image" and len(r.get("hue") or []) == 12 for r in records):
+        log("note: some color stats use the old 12-bin histogram; "
+            "run: embed_search.py index --refresh-colors")
 
     qvec, musts = build_query(client, args)
     qvec = truncate(qvec, args.dims)
@@ -627,6 +650,9 @@ def write_html(path, query, rows, thumb_w=512):
         color = f"<span class='c'>{row['color']:.3f}</span>" if "color" in row else ""
         cells.append(f"<figure>{thumb}<figcaption><b>{row['score']:.4f}</b> {color}"
                      f"<div>{os.path.basename(row['path'])}</div></figcaption></figure>")
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
     with open(path, "w", encoding="utf-8") as fh:
         fh.write("<!doctype html><meta charset='utf-8'><title>" + query +
                  "</title><style>body{font:14px system-ui;margin:2em;background:#111;color:#ddd}"
@@ -673,6 +699,9 @@ def build_parser():
     idx.add_argument("--max-chars", type=int, default=4000, help="text files: characters to embed")
     idx.add_argument("--force", action="store_true", help="re-embed everything")
     idx.add_argument("--compact", action="store_true", help="drop entries for deleted files")
+    idx.add_argument("--refresh-colors", action="store_true",
+                     help="recompute color stats for already-indexed images in place "
+                          "(local only, no server needed); use after upgrading the histogram")
 
     sr = add_scope(sub.add_parser("search", help="rank indexed files against a text query"))
     sr.add_argument("query")

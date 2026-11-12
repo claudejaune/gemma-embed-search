@@ -89,7 +89,7 @@ uv run scripts/embed_search.py index
 **Step 5 — search.**
 
 ```bash
-uv run scripts/embed_search.py search "a black labrador on a beach" --top 20 --html hits.html
+uv run scripts/embed_search.py search "a black labrador on a beach" --top 20 --html hits/labrador.html
 ```
 
 ## Query cookbook
@@ -99,7 +99,7 @@ uv run scripts/embed_search.py search "a black labrador on a beach" --top 20 --h
 | Plain semantic search | `search "a crowded night market"` |
 | Two facets that must both hold | `search "a woman" --must "the color yellow"` |
 | Synonyms so one phrasing does not dominate | `search "a woman" --also "a girl" --also "female portrait"` |
-| Find every image containing X | `search "characters with red hair" --top 60 --html hits.html` |
+| Find every image containing X | `search "characters with red hair" --top 60 --html hits/red-hair.html` |
 | Subject plus a real color constraint | `search "a woman" --color yellow --min-color 0.05` |
 | Mostly monochrome or dark frames | `search "any image" --max-color blue --modality image` |
 | Only one kind of file | `search "siren sounds" --modality audio` |
@@ -119,8 +119,10 @@ so stdout always pipes cleanly into `jq`.
 
 Cosine scores from this model family sit between about 0.3 and 0.8. The absolute number
 means little; the gap between hits and misses matters. If the top of the list is wrong, the
-query is wrong — rephrase it rather than trusting the ranking. Never present a long list as
-equally good: name where the confident results stop and the guessing starts.
+query is wrong — rephrase it rather than trusting the ranking. The model cannot bind an
+attribute to a region ("red eyes" matches any reddish face) — see the query guide's "What the
+model cannot do" before presenting binding-sensitive results as precise. Never present a
+long list as equally good: name where the confident results stop and the guessing starts.
 
 **A short list is not the whole answer.** Every indexed file gets a score, so the `total` in the
 output counts the whole corpus and never tells you how many results are plausible. Find the
@@ -131,8 +133,10 @@ applied. Never claim "there are none" without a widened list, `--top 100` or mor
 actually looked at.
 
 For visual review, always offer `--html`: it writes a contact sheet of thumbnails with
-scores and filenames that the user can open in a browser. A bare `--html` writes `hits.html`
-in the working directory; `--html FILE` sets the path. Thumbnails are embedded as base64, so
+scores and filenames that the user can open in a browser. Write sheets into a `hits/` folder
+in the current directory, named after the query — `--html hits/red-hair.html` — and the
+folder is created if missing. A bare `--html` writes `hits.html` in the working directory;
+`--html FILE` sets any path. Thumbnails are embedded as base64, so
 the sheet is self-contained and travels on its own. The sheet embeds real thumbnails of the
 matched files, so treat it as a copy of that part of the library: keep it out of version control
 and out of anything you forward. They are 512 px wide by default; raise

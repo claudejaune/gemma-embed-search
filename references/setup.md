@@ -37,7 +37,7 @@ llama-server \
 | `--embedding` | Enables `/v1/embeddings`. Without it every request 404s. |
 | `--pooling mean` | Multimodal embedding models are trained for mean pooling. Other pooling makes image-to-text similarity collapse. |
 | `--mmproj` | Loads the vision (and, for audio-capable models, audio) encoder. Text works without it, images silently do not. |
-| `--ctx-size` | Must hold a whole batch. EmbeddingGemma 2 spends about 1024 vision tokens per image at `-ub 2048` (the server caps its native 1120-token budget to fit one ubatch), so 8192 tokens fits roughly 7 images per request. Keep `--batch` at or below that, or raise `--ubatch-size` to raise both budgets. |
+| `--ctx-size` | Must hold a whole batch. EmbeddingGemma 2 spends about 1024 vision tokens per image at `-ub 2048` (llama.cpp requests the encoder's maximum 1120-token budget, capped to fit one ubatch), so 8192 tokens fits roughly 7 images per request. Keep `--batch` at or below that, or raise `--ubatch-size` to fit more images. |
 | `--api-key` | Optional. If set, pass the same key to the script with `--api-key` or `EMBED_SEARCH_API_KEY`. |
 | `--models-preset` / multi-model routers | The `--model` name the script sends must match the name the server advertises in `GET /models`, which is not always the file name. With `-hf`, the advertised name is the `-hf` spec itself, e.g. `ggml-org/embeddinggemma-2-GGUF:Q8_0`. |
 
@@ -83,9 +83,15 @@ What that means:
 - The emitted token count drifts around the configured budget (256 to 303 for a 280 setting),
   so leave headroom when sizing `--batch` against `--ctx-size`.
 - The budget is clamped by the ubatch size: the server logs `cap image_max_tokens
-  (original=1120) to 1024 (n_ubatch = 2048)` when `-ub` is smaller than the model's native
+  (original=1120) to 1024 (n_ubatch = 2048)` when `-ub` is smaller than the requested
   budget. At the capped 1024, an 8192-token context holds only about 7 images per request —
   a larger `--batch` overflows the context and the request hangs until it times out.
+
+In the model's own terms, an image is compressed to "soft tokens": trained at a default of
+280, supported from 70 to 1120, with the model card noting that a higher budget buys better
+fine-grained detail. llama.cpp already requests the maximum (1120, capped by
+`--ubatch-size`), so there is nothing to gain in quality by raising `-ub` further — a larger
+`-ub` only fits more images per request.
 
 ## Choosing a model
 
@@ -119,7 +125,13 @@ failing is the most common half-broken setup, usually a missing `--mmproj`.
 | Path | Contents |
 | --- | --- |
 | `~/.config/gemma-embed-search/config.json` | url, model, api key, default root. Mode 0600. Delete it to reset. |
-| `~/.cache/gemma-embed-search/<folder>-<hash>.jsonl` | The index. One JSON object per file: path, mtime+size key, modality, packed float32 vector, color histogram. |
+| `~/.cache/gemma-embed-search/<folder>-<hash>.jsonl` | The index. One JSON object per file: path, mtime+size key, modality, packed float32 vector, 24-bin color histogram. |
 
 The index is plain JSON lines: `wc -l` counts entries, `jq` reads them, and deleting it is
 always safe. It costs about 4 KB per embedded file.
+
+The color histogram is 24 bins (15° each) and counts only saturated pixels. An index built
+with the older 12-bin histogram still embeds and searches, but its color ratios are coarser
+and over-count warm tones; `search --color` warns when it sees one. Run
+`index --refresh-colors` to recompute the histogram in place from the files — local only, no
+server, seconds to run, and the embeddings are untouched.
