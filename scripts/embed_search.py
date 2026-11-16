@@ -32,7 +32,7 @@ Precedence for url/model/api-key/root/index: flag > environment
 
 Exit codes:
   0 success            2 usage error           3 server unreachable or rejected auth
-  4 index missing      5 nothing to do         6 server error mid-run
+  4 index missing      5 nothing to do         6 server error mid-run, or every pending file skipped
 
 Diagnostics go to stderr; `--json` output goes to stdout so it pipes into jq.
 """
@@ -85,6 +85,23 @@ def die(code, msg):
 
 def log(msg):
     print(msg, file=sys.stderr)
+
+
+def pillow_status():
+    """(ok, detail) for the local Pillow check; doctor reports it, the guards use it."""
+    try:
+        import PIL
+        return True, getattr(PIL, "__version__", "unknown")
+    except ImportError:
+        return False, ("not installed. Prefer `uv run scripts/embed_search.py`, which installs "
+                       "Pillow into a throwaway env; if uv is unavailable, ask the user before "
+                       "installing system-wide: python -m pip install pillow")
+
+
+def require_pillow(what):
+    ok, detail = pillow_status()
+    if not ok:
+        die(2, f"Pillow is required to {what}: {detail}")
 
 
 # ---------------------------------------------------------------- configuration
@@ -375,6 +392,8 @@ def truncate(vec, dims):
 
 def cmd_doctor(args, cfg, client):
     out = {"url": client.url, "model": client.model, "auth": bool(client.api_key)}
+    ok, detail = pillow_status()
+    out["pillow"] = {"ok": True, "version": detail} if ok else {"ok": False, "hint": detail}
     models = None
     for path in ("/v1/models", "/models"):
         body = client.try_get(path)
@@ -452,6 +471,7 @@ def iter_files(root, include, exclude_dirs):
 def cmd_index(args, cfg, client):
     root, idx = resolve_paths(args, cfg, need_root=True)
     if args.refresh_colors:
+        require_pillow("recompute color stats")
         meta, recs = read_index(idx)
         done = 0
         for r in recs:
@@ -511,6 +531,9 @@ def cmd_index(args, cfg, client):
         print(json.dumps({"indexed": 0, "total": len(existing), "index": idx}))
         return 5 if not existing else 0
 
+    if any(mod == "image" for _, mod, _ in todo):
+        require_pillow("embed images")
+
     mode = "a" if existing and not args.force else "w"
     fh = open(idx, mode, encoding="utf-8")
     if mode == "w":
@@ -559,6 +582,9 @@ def cmd_index(args, cfg, client):
     summary = {"indexed": done, "skipped_errors": errors, "total": len(existing) + done,
                "index": idx, "seconds": round(time.time() - started, 1)}
     print(json.dumps(summary))
+    if done == 0 and errors > 0:
+        die(6, f"every one of {errors} pending file(s) failed to embed; nothing was indexed. "
+               f"Check the skip reasons above.")
     return 0
 
 
@@ -580,6 +606,8 @@ def cmd_search(args, cfg, client):
     _, records = read_index(idx)
     if not records:
         die(4, f"index {idx} is empty. Run: embed_search.py index --root DIR")
+    if getattr(args, "html", None):
+        require_pillow("write thumbnail contact sheets")
     if (args.color or args.max_color is not None) and any(
             r.get("m") == "image" and len(r.get("hue") or []) == 12 for r in records):
         log("note: some color stats use the old 12-bin histogram; "

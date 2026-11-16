@@ -16,6 +16,27 @@ user's hardware through a local server; nothing is uploaded anywhere.
 `scripts/embed_search.py` does four things: `doctor` checks the server, `init` saves the
 connection, `index` embeds files into a cache, and `search` ranks them against a query.
 
+## Prerequisites
+
+Check these before anything else; `doctor` reports both.
+
+- **Python 3.9+ with Pillow** (needed to re-encode images and compute color stats).
+  Check: `python -c "import PIL; print(PIL.__version__)"` (use `python3` on Linux/macOS).
+  If it succeeds, plain `python scripts/embed_search.py` works. If Pillow is missing,
+  **prefer `uv run scripts/embed_search.py`**: uv installs Pillow from the script's inline
+  metadata into a throwaway environment and touches nothing system-wide. If `uv` is not
+  installed either, do not install anything silently — tell the user Pillow is missing and
+  confirm before running `python -m pip install pillow` (or the distro package:
+  `python3-pil` via apt, `python-pillow` via pacman, `python3-pillow` via dnf).
+- **An embeddings server**: llama.cpp's `llama-server` (or the unified `llama serve`)
+  running the embedding model with `--embedding --pooling mean` and the vision projector
+  loaded. Quick form:
+  `llama serve -hf ggml-org/embeddinggemma-2-GGUF:Q8_0 --embedding --pooling mean -c 8192 -b 2048 -ub 2048 -ngl 99 --host 127.0.0.1 --port 1235`
+  (the matching `mmproj` is downloaded automatically). **LM Studio's built-in server does
+  not work for images**: its `/v1/embeddings` rejects multimodal content parts, so text
+  embeds and images fail. Use llama.cpp; exact flags and caveats are in
+  [references/setup.md](references/setup.md).
+
 ## Local configuration
 
 Settings live in `config.json`, never in this file:
@@ -40,7 +61,7 @@ it, and anything written there is lost.
 ## Setup checklist
 
 Progress:
-- [ ] Step 1: Confirm the server and pick a model name (`doctor`)
+- [ ] Step 1: Preflight with `doctor` — server reachable, model list, Pillow status
 - [ ] Step 2: Save the connection (`init`)
 - [ ] Step 3: Index a 20-file pilot and eyeball one query
 - [ ] Step 4: Index the whole folder
@@ -48,8 +69,10 @@ Progress:
 
 Skip Step 2 if `config.json` already has `url` and `model`.
 
-Run the script with `uv run scripts/embed_search.py` (installs Pillow from the script's
-inline metadata) or `python3 scripts/embed_search.py` if Pillow is already importable.
+Run the script with `uv run scripts/embed_search.py` unless `python -c "import PIL"`
+succeeds, in which case plain `python3 scripts/embed_search.py` is fine. If Pillow is
+missing and `uv` is not installed, ask the user before installing Pillow with pip — never
+install system-wide without confirming.
 
 **Step 1 — find the server and model name.** Never guess the model name; read it from the
 server.
@@ -58,7 +81,8 @@ server.
 uv run scripts/embed_search.py --url http://127.0.0.1:1235 doctor
 ```
 
-`doctor` prints the models the server offers and probes one embedding. If the user has not
+`doctor` prints the models the server offers, probes one embedding, and reports whether
+Pillow is importable (`pillow` in its JSON). If the user has not
 started a server yet, read [references/setup.md](references/setup.md) and give them the
 command for their model.
 
@@ -144,6 +168,9 @@ and out of anything you forward. They are 512 px wide by default; raise
 
 ## Gotchas
 
+- Image work needs Pillow, and a Python without it fails up front (exit 2) instead of
+  silently skipping every file and exiting 0. Prefer `uv run scripts/embed_search.py`;
+  if `uv` is not installed, confirm with the user before `python -m pip install pillow`.
 - A color word inside the query text is a soft hint, not a filter. `"a woman with a yellow
   theme"` ranks a woman in an orange jacket first. Use `--color yellow --min-color 0.05`
   for an actual constraint; it is computed from pixels, not from the model.
@@ -198,7 +225,8 @@ stats                        Entry count, modality mix, model, index size
 ```
 
 Exit codes: `0` success, `2` usage error, `3` server unreachable or auth rejected,
-`4` index missing, `5` nothing to do, `6` server error mid-run. Run
+`4` index missing, `5` nothing to do, `6` server error mid-run or every pending file
+skipped (total failure). Run
 `scripts/embed_search.py <command> --help` for full flag documentation.
 
 Config resolution is flag > environment (`EMBED_SEARCH_URL`, `EMBED_SEARCH_MODEL`,

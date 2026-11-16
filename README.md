@@ -32,6 +32,7 @@ This skill has been tested successfully on an AMD Strix Halo, a 4 GB VRAM Nvidia
 sudo apt install python3-pil      # Debian, Ubuntu
 sudo pacman -S python-pillow      # Arch Linux
 sudo dnf install python3-pillow   # Fedora
+python -m pip install pillow      # Windows, or any system without a distro package
 ```
 
 Verify:
